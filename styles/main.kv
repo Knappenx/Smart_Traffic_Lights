@@ -1,0 +1,225 @@
+<WindowLayout>
+    # Variable to be used in main program
+    green_light_1: green_light_1
+    yellow_light_1: yellow_light_1
+    red_light_1: red_light_1
+
+    green_light_2: green_light_2
+    yellow_light_2: yellow_light_2
+    red_light_2: red_light_2
+    
+    rgba: (1,0,0,.8)
+    
+    # General Application Grid
+    GridLayout:
+        cols: 1
+        rows: 3
+        size: root.width, root.height
+        
+        #---------------- First Row ----------------#
+        Label:
+            text: "SMART TRAFFIC LIGHTS"
+            color: "black"
+            font_size: 50
+            size_hint: 1, None
+            height: self.texture_size[1] + dp(20) 
+            bold: True
+            canvas.before:
+                Color:
+                    rgba: (1,1,1,1)
+                Rectangle:
+                    pos: self.pos
+                    size: self.size  
+
+        #---------------- Second Row ----------------#
+        GridLayout:
+            cols: 2
+            #-------------- First Column --------------#
+            # Represents the traffict light
+            GridLayout:
+                rows: 3
+                padding: 50, 25
+                size_hint: (0.25, self.height)
+                canvas.before:
+                    Color:
+                        rgba: (1,1,1,0.5)
+                    RoundedRectangle:
+                        pos: (self.x + 30, self.y + 15)
+                        size: (self.width-60, self.height-30)
+                        radius: [15]
+                Label:
+                    id: red_light_1
+                    canvas.before:
+                        Color:
+                            #rgba: root.rgba
+                            rgba: (1,0,0,.8)
+                        Ellipse:
+                            size: (self.width, self.height-10)
+                            pos: self.pos
+                            
+                Label:
+                    id: yellow_light_1
+                    padding: 0, 10
+                    canvas.before:
+                        Color:
+                            rgba: (1,1,0,.8)
+                        Ellipse:
+                            size: (self.width, self.height-10)
+                            pos: self.pos
+                Label:
+                    id: green_light_1
+                    padding: 0, 10
+                    canvas.before:
+                        Color:
+                            rgba: (0,1,0,.8)
+                        Ellipse:
+                            size: (self.width, self.height-10)
+                            pos: self.pos
+
+            #-------------- Second Column --------------#
+            # Contains video and data
+            GridLayout:
+                rows: 2
+                size_hint: (0.75, self.height)
+                Label:
+                    text: "Video 1"
+                GridLayout:
+                    cols: 3
+                    rows: 1
+                    size_hint: (self.width, 0.15)
+                    padding: 0,0,0,20
+                    Label:
+                        text: "Traffic light 1"
+                        color: "black"
+                        bold: True
+                        font_size: 25
+                        size_hint: 1, None
+                        height: self.texture_size[1] + dp(10)
+                        canvas.before:
+                            Color:
+                                rgba: (1,1,1,1)
+                            Rectangle:
+                                pos: self.pos
+                                size: self.size
+                    Label:
+                        text: "Cars in frame: X"
+                        color: "black"
+                        bold: True
+                        font_size: 25
+                        size_hint: 1, None
+                        height: self.texture_size[1] + dp(10)
+                        canvas.before:
+                            Color:
+                                rgba: (1,1,1,1)
+                            Rectangle:
+                                pos: self.pos
+                                size: self.size
+                    Label:
+                        text: "Current Mode"
+                        color: "black"
+                        bold: True
+                        font_size: 25
+                        size_hint: 1, None
+                        height: self.texture_size[1] + dp(10)
+                        canvas.before:
+                            Color:
+                                rgba: (1,1,1,1)
+                            Rectangle:
+                                pos: self.pos
+                                size: self.size
+
+        #---------------- Third Row ----------------#
+        GridLayout:
+            cols: 2
+            #-------------- First Column --------------#
+            # Represents the traffict light
+            GridLayout:
+                rows: 3
+                padding: 50, 25
+                size_hint: (0.25, self.height)
+                canvas.before:
+                    Color:
+                        rgba: (1,1,1,0.5)
+                    RoundedRectangle:
+                        pos: (self.x + 30, self.y + 15)
+                        size: (self.width-60, self.height-30)
+                        radius: [15]
+                Label:
+                    id: red_light_2
+                    padding: 0, 10
+                    canvas.before:
+                        Color:
+                            rgba: (1,0,0,.8)
+                        Ellipse:
+                            size: (self.width, self.height-10)
+                            pos: self.pos
+                Label:
+                    id: yellow_light_2
+                    padding: 0, 10
+                    canvas.before:
+                        Color:
+                            rgba: (1,1,0,.8)
+                        Ellipse:
+                            size: (self.width, self.height-10)
+                            pos: self.pos
+                Label:
+                    id: green_light_2
+                    padding: 0, 10
+                    canvas.before:
+                        Color:
+                            rgba: (0,1,0,.8)
+                        Ellipse:
+                            size: (self.width, self.height-10)
+                            pos: self.pos
+
+            #-------------- Second Column --------------#
+            # Contains video and data
+            GridLayout:
+                rows: 3
+                size_hint: (0.75, self.height)
+                Label:
+                    text: "Video 2"
+                GridLayout:
+                    cols: 3
+                    rows: 1
+                    size_hint: (self.width, 0.15)
+                    Label:
+                        text: "Traffic light 2"
+                        color: "black"
+                        bold: True
+                        font_size: 25
+                        size_hint: 1, None
+                        height: self.texture_size[1] + dp(10)
+                        canvas.before:
+                            Color:
+                                rgba: (1,1,1,1)
+                            Rectangle:
+                                pos: self.pos
+                                size: self.size
+                    Label:
+                        text: "Cars in frame: X"
+                        color: "black"
+                        bold: True
+                        font_size: 25
+                        size_hint: 1, None
+                        height: self.texture_size[1] + dp(10)
+                        canvas.before:
+                            Color:
+                                rgba: (1,1,1,1)
+                            Rectangle:
+                                pos: self.pos
+                                size: self.size
+                    Label:
+                        text: "Current Mode"
+                        color: "black"
+                        bold: True
+                        font_size: 25
+                        size_hint: 1, None
+                        height: self.texture_size[1] + dp(10)
+                        canvas.before:
+                            Color:
+                                rgba: (1,1,1,1)
+                            Rectangle:
+                                pos: self.pos
+                                size: self.size
+            
