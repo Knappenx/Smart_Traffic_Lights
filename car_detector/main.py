@@ -1,76 +1,83 @@
-#!/usr/bin/python
 
 import numpy as np
 import random as rnd
 import cv2
-from utils import *
-from make_model import *
+from car_detector.utils import *
+from car_detector.make_model import *
 
-seed = 11
-rnd.seed(seed)
-np.random.seed(seed)
+class CarDetector:
+    def __init__(self, videoClass) -> None:
+        self.videoClass = videoClass
+        self.seed = 11
+        self.videofile = './contituyentes_demo.mp4'
+        self.cap = cv2.VideoCapture(self.videofile)
+        self.model = make_model()
+        self.model.load_weights('./car_detector/weights_best.h5')
 
-############################
-#### EDIT ONLY THIS BLOCK
+        self.lower = [0, 0, 0]
+        self.upper = [100, 100, 100]
 
-videofile = './car_detector/contituyentes_demo.mp4'
-cap = cv2.VideoCapture(videofile)
+        self.stepSize = 30
 
-model = make_model()
-model.load_weights('./car_detector/weights_best.h5')
+        self.lower = np.array(self.lower)
+        self.upper = np.array(self.upper)
 
-lower = [0, 0, 0]
-upper = [100, 100, 100]
+    def start(self) -> None:
+        while(True):
 
-stepSize = 30
+            ret, frame = self.cap.read()
+            if(ret == False):
+                print('Notjhng else to do buddy :c')
+                break
 
-############################
+            image_masked = self.__process_frame(frame)
+            s = 0.25
 
-lower = np.array(lower)
-upper = np.array(upper)
+            #Resize images for computational efficiency
+            frame = cv2.resize(frame, None, fx = s ,fy = s)
+            image_masked = cv2.resize(image_masked,None, fx = s,fy = s)
 
-while(True):
+            #Run the sliding window detection process
+            bbox_list, totalWindows, correct, score = detectionProcess(
+                cv2.cvtColor(frame,cv2.COLOR_BGR2RGB),
+                self.model, 
+                winH=50, 
+                winW=50, 
+                depth=3, 
+                nb_images=1, 
+                scale=1, 
+                stepSize=self.stepSize, 
+                thres_score=0.05
+            )
 
-    ret,frame = cap.read()
-    if(ret == False):
-        print("Done")
-        break
+            #Draw the detections
+            drawBoxes(frame, bbox_list)
 
-    #Convert image to HSV from BGR
-    img_hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+            # Draw detections and road masks
+            cv2.imshow('video',sidebyside(frame, image_masked))
+            k = cv2.waitKey(3)
 
-    # Find the pixels that correspond to road
-    img_out = cv2.inRange(img_hsv, lower, upper)
+            #QUIT
+            if(k & 0xFF == ord('q')):
+                cv2.destroyWindow("video")
+                break
 
-############################
+        self.cap.release()
+        cv2.destroyAllWindows()
 
-    # Clean from noisy pixels and keep only the largest connected segment
-    img_out = post_process(img_out)
+    def __process_frame(self, frame) -> None:
+        #Convert image to HSV from BGR
+        img_hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
-    image_masked = frame.copy()
+        # Find the pixels that correspond to road
+        img_out = cv2.inRange(img_hsv, self.lower, self.upper)
 
-    # Get masked image
-    image_masked[img_out == 0] = (0, 0, 0)
-    s=0.25
+        # Clean from noisy pixels and keep only the largest connected segment
+        img_out = post_process(img_out)
 
-    #Resize images for computational efficiency
-    frame = cv2.resize(frame,None, fx=s,fy=s)
-    image_masked = cv2.resize(image_masked,None, fx=s,fy=s)
+        image_masked = frame.copy()
 
-    #Run the sliding window detection process
-    bbox_list, totalWindows, correct, score = detectionProcess(cv2.cvtColor(frame,cv2.COLOR_BGR2RGB), model, winH=50, winW=50, depth=3, nb_images=1, scale=1, stepSize=stepSize, thres_score=0.05)
+        # Get masked image
+        image_masked[img_out == 0] = (0, 0, 0)
 
-    #Draw the detections
-    drawBoxes(frame, bbox_list)
-
-    # Draw detections and road masks
-    cv2.imshow('video',sidebyside(frame,image_masked))
-    k = cv2.waitKey(3)
-
-    #QUIT
-    if(k & 0xFF == ord('q')):
-        cv2.destroyWindow("video")
-        break
-
-cap.release()
-cv2.destroyAllWindows()
+        return image_masked

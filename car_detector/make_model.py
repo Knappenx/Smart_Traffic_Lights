@@ -6,9 +6,6 @@ from keras.regularizers import l2
 
 def make_model():
 
-############################
-#### EDIT ONLY THIS BLOCK
-
     model = Sequential()
 
     model.add(Conv2D(32, (5, 5),kernel_initializer = RandomNormal(mean=0.0, stddev=0.05, seed=None), kernel_regularizer=l2(0.001), input_shape=(50, 50, 3)))
@@ -29,8 +26,6 @@ def make_model():
     model.add(Dropout(0.5))
     model.add(Dense(1))
     model.add(Activation('sigmoid'))
-
-############################
 
     # check if model is implemented
     assert type(model) is Sequential, "model not defined"

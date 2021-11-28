@@ -1,11 +1,10 @@
-import cv2
 import numpy as np
 import random as rnd
 
 from keras.callbacks import ModelCheckpoint
 from make_model import *
 
-from keras.preprocessing.image import ImageDataGenerator, array_to_img, img_to_array, load_img
+from keras.preprocessing.image import ImageDataGenerator
 
 seed = 11
 rnd.seed(seed)
@@ -42,20 +41,20 @@ test_datagen = ImageDataGenerator(rescale=1./255)
 # subfolers of 'data/train', and indefinitely generate
 # batches of augmented image data
 train_generator = train_datagen.flow_from_directory(
-        'data/train',  # this is the target directory
+        'car_detector/data/train',  # this is the target directory
         target_size=(winH, winW),  # all images will be resized to 150x150
         batch_size=batch_size,
         class_mode='binary')  # since we use binary_crossentropy loss, we need binary labels
 
 # this is a similar generator, for validation data
 validation_generator = test_datagen.flow_from_directory(
-        'data/validation',
+        'car_detector/data/validation',
         target_size=(winH, winW),
         batch_size=batch_size,
         class_mode='binary')
 
-filepath="weights_best.h5"
-checkpoint = ModelCheckpoint(filepath, monitor='val_acc', verbose=1, save_best_only=True, mode='max')
+filepath="car_detector/weights_best.h5"
+checkpoint = ModelCheckpoint(filepath, monitor='val_accuracy', verbose=1, save_best_only=True, mode='max')
 callbacks_list = [checkpoint]
 
 class_weight = {0: 10,
@@ -63,7 +62,7 @@ class_weight = {0: 10,
 
 # Change steps_per_epoch and validation_steps according to the dataset that you use.
 				
-model.fit_generator(
+model.fit(
         train_generator,
         steps_per_epoch=5131 // batch_size,
         epochs=epochs,
@@ -71,3 +70,5 @@ model.fit_generator(
         validation_steps=1603 // batch_size,
         callbacks=callbacks_list,
         class_weight=class_weight)
+
+model.load_weights(filepath)
