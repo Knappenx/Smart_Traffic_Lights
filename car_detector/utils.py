@@ -65,7 +65,7 @@ def display(img_init, img_hsv, img_out2, img_out):
     cv2.imshow('Output', updown(sidebyside(cv2.addWeighted(img_init, 1, mask, 0.3, 0), img_hsv),sidebyside(channels3(img_out), channels3(img_out2))))
 
 
-def detectionProcess(frame,model,winH=32,winW=32,depth=1,nb_images=2,scale=1.2,stepSize=10, thres_score = 0):
+def detectionProcess(frame, model, winH = 32, winW = 32, depth = 1, nb_images = 2, scale = 1.2, stepSize = 10, thres_score = 0):
     index=0
     totalWindows = 0
     correct=0
@@ -73,11 +73,11 @@ def detectionProcess(frame,model,winH=32,winW=32,depth=1,nb_images=2,scale=1.2,s
     bbox_list = []
     score = []
     
-    for resized in pyramid(frame, scale=scale,minSize=(winH,winW),nb_images=nb_images):
+    for resized in pyramid(frame, scale = scale, minSize = (winH , winW), nb_images = nb_images):
         #gray = cv2.cvtColor(resized,cv2.COLOR_RGB2GRAY)
         # loop over the sliding window for each layer of the pyramid
-        scale = frame.shape[0]/resized.shape[0]
-        for (x, y, window) in sliding_window(resized, stepSize=stepSize, windowSize=(winW, winH)):
+        scale = frame.shape[0] / resized.shape[0]
+        for (x, y, window) in sliding_window(resized, stepSize=stepSize, windowSize = (winW, winH)):
             # if the window does not meet our desired window size, ignore it
             if window.shape[0] != winH or window.shape[1] != winW:
                 continue
@@ -87,25 +87,24 @@ def detectionProcess(frame,model,winH=32,winW=32,depth=1,nb_images=2,scale=1.2,s
             # WINDOW
             
             if(depth == 1):
-                window = cv2.cvtColor(window,cv2.COLOR_BGR2GRAY)
+                window = cv2.cvtColor(window, cv2.COLOR_BGR2GRAY)
                 window = np.expand_dims(window,3)
                 
             window = window[None,:,:,:]
     
             totalWindows+=1
     
-            class_out = model.predict((window.astype(np.float32))/255.,batch_size =1)[0]
+            class_out = model.predict((window.astype(np.float32))/255., batch_size =1)[0]
 
             if(class_out < thres_score):
                 bbox_list.append(((int(x*scale)),int(y*scale),int((x+winW)*scale),int((y+winH)*scale)))     
                 score.append(class_out)
                 correct+=1
 
-        
         index+=1 
 
     
-    return bbox_list,totalWindows,correct,score
+    return bbox_list, totalWindows, correct, score
     
 def sliding_window(image, stepSize, windowSize):
     # slide a window across the image
@@ -114,7 +113,7 @@ def sliding_window(image, stepSize, windowSize):
             # yield the current window
             yield (x, y, image[y:y + windowSize[1], x:x + windowSize[0]])
 
-def pyramid(image, scale=1.5, minSize=(30, 30),nb_images=3):
+def pyramid(image, scale = 1.5, minSize = (30, 30), nb_images = 3):
     # yield the original image
 	yield image
 	count = 0

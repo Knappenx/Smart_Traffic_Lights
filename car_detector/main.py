@@ -1,83 +1,55 @@
+# -*- coding: utf-8 -*-
 
-import numpy as np
-import random as rnd
 import cv2
-from car_detector.utils import *
-from car_detector.make_model import *
+print(cv2.__version__)
 
 class CarDetector:
-    def __init__(self, videoClass) -> None:
-        self.videoClass = videoClass
-        self.seed = 11
-        self.videofile = './contituyentes_demo.mp4'
-        self.cap = cv2.VideoCapture(self.videofile)
-        self.model = make_model()
-        self.model.load_weights('./car_detector/weights_best.h5')
+    def __init__(self, video_path, cascade_path) -> None:
+        print("[INFO] loading video...", video_path)
+        self.cascade_path = cascade_path
+        self.video_path = video_path
+        self.cap = cv2.VideoCapture(self.video_path)
+        self.car_cascade = cv2.CascadeClassifier(self.cascade_path)
+        self.__create_trackbar()
 
-        self.lower = [0, 0, 0]
-        self.upper = [100, 100, 100]
+    def __parameter_selection(self, x):
+        pass
 
-        self.stepSize = 30
-
-        self.lower = np.array(self.lower)
-        self.upper = np.array(self.upper)
+    def __create_trackbar(self):
+        cv2.namedWindow("img")
+        cv2.createTrackbar('Scale Factor', 'img', 5, 200, self.__parameter_selection)
+        cv2.createTrackbar('Min Neighbours', 'img', 10, 100, self.__parameter_selection)
 
     def start(self) -> None:
-        while(True):
+        while True:
+            ret, img = self.cap.read()
+            if (type(img) == type(None)):
+                break
+            
+            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            scalefactor_track = cv2.getTrackbarPos('Scale Factor', 'img')
+            min_neigh_track = cv2.getTrackbarPos('Min Neighbours', 'img')
 
-            ret, frame = self.cap.read()
-            if(ret == False):
-                print('Notjhng else to do buddy :c')
+            if scalefactor_track is 0:
+                scalefactor_track = 1
+            else:
+                cars = self.car_cascade.detectMultiScale(
+                    gray, 
+                    scaleFactor = (scalefactor_track + 100) / 100, # 1.25 
+                    minNeighbors = min_neigh_track, #1
+                    minSize=(60, 60), 
+                    flags=cv2.CASCADE_SCALE_IMAGE
+                )
+
+            print(f'Número de carros contados: {len(cars)}')
+
+            for (x, y, w, h) in cars:
+                cv2.rectangle(img, (x, y),(x + w,y + h),(0, 0, 255), 2)      
+            
+            img.save('frame.jpg')
+            cv2.imshow(self.video_path, img)
+            
+            if cv2.waitKey(33) == 27:
                 break
 
-            image_masked = self.__process_frame(frame)
-            s = 0.25
-
-            #Resize images for computational efficiency
-            frame = cv2.resize(frame, None, fx = s ,fy = s)
-            image_masked = cv2.resize(image_masked,None, fx = s,fy = s)
-
-            #Run the sliding window detection process
-            bbox_list, totalWindows, correct, score = detectionProcess(
-                cv2.cvtColor(frame,cv2.COLOR_BGR2RGB),
-                self.model, 
-                winH=50, 
-                winW=50, 
-                depth=3, 
-                nb_images=1, 
-                scale=1, 
-                stepSize=self.stepSize, 
-                thres_score=0.05
-            )
-
-            #Draw the detections
-            drawBoxes(frame, bbox_list)
-
-            # Draw detections and road masks
-            cv2.imshow('video',sidebyside(frame, image_masked))
-            k = cv2.waitKey(3)
-
-            #QUIT
-            if(k & 0xFF == ord('q')):
-                cv2.destroyWindow("video")
-                break
-
-        self.cap.release()
         cv2.destroyAllWindows()
-
-    def __process_frame(self, frame) -> None:
-        #Convert image to HSV from BGR
-        img_hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-
-        # Find the pixels that correspond to road
-        img_out = cv2.inRange(img_hsv, self.lower, self.upper)
-
-        # Clean from noisy pixels and keep only the largest connected segment
-        img_out = post_process(img_out)
-
-        image_masked = frame.copy()
-
-        # Get masked image
-        image_masked[img_out == 0] = (0, 0, 0)
-
-        return image_masked
