@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 
 from time import sleep
 import time
@@ -6,19 +5,17 @@ import cv2
 import logging
 from threading import Thread
 from car_detector.traffic_light import TrafficLight
+from car_detector.states import States
 class CarDetector(Thread):
-    def __init__(self, video_path, cascade_path, lock) -> None:
-        logging.info("Initializing car detector...")
+    def __init__(self, video_path, cascade_path, init_state) -> None:
         Thread.__init__(self)
         self.light = TrafficLight()
         self.cascade_path = cascade_path
         self.video_path = video_path
         self.cap = cv2.VideoCapture(self.video_path)
         self.car_cascade = cv2.CascadeClassifier(self.cascade_path)
-        self.img = None
-        self.lock = lock
         self.running = True
-        self.paused = False
+        self.state = init_state
         # self.__create_trackbar()
 
 
@@ -28,35 +25,38 @@ class CarDetector(Thread):
         cv2.createTrackbar('Min Neighbours', 'img', 10, 100, self.__parameter_selection)
 
     def run(self):
-        logging.info("Starting video...")
-        self.__reproduce_video()
-
-    def __reproduce_video(self) -> None:
-        # self.lock.acquire()
-        start_time = time.clock()
+        self.__green_state()
         while self.running:
-            # seconds = int(time.clock() - start_time)
-            # print('Seconds: ', seconds)
-            ret, self.img = self.cap.read()
-            if (type(self.img) == type(None) and ret == False):
-                break
-            cars = self.__detect_cars(self.img)
-            # print(f'Número de carros contados: {len(cars)}')
-            for (x, y, w, h) in cars:
-                cv2.rectangle(self.img, (x, y),(x + w, y + h),(0, 0, 255), 2)
-                
-            cv2.imshow(self.video_path, self.img)
-
-            if self.paused is True:
-                cv2.imshow(self.video_path, self.img)
-                self.light.green()
-                time.sleep(self.seconds)
-                self.paused = False
-
-            if cv2.waitKey(33) == 27:
+            if States.GREEN_LIGHT.value == self.state:
+                self.__reproduce()
+            if States.YELLOW_LIGHT.value is self.state:
+                self.__yellow_state()
+            if States.RED_LIGHT.value is self.state:
+                self.__red_state(10)
+            if States.STOP_APP.value is self.state:
+                logging.info("Stopping app...")
                 break
 
         cv2.destroyAllWindows()
+
+    def __reproduce(self) -> None:
+        ret, img = self.cap.read()
+
+        if (type(img) == type(None) and ret == False):
+            logging.error('No image found')
+            exit(1)
+
+        cars = self.__detect_cars(img)
+        # print(f'Número de carros contados: {len(cars)}')
+
+        for (x, y, w, h) in cars:
+            ## TODO - Lógica para cambiar estado dependiendo de la cantidad de carros detectados y si hay auto de emergencia
+            cv2.rectangle(img, (x, y),(x + w, y + h),(0, 0, 255), 2)
+            
+        cv2.imshow(self.video_path, img)
+
+        if cv2.waitKey(33) == 27:
+            self.state = States.STOP_APP.value
     
     def __detect_cars(self, img) -> list:
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -76,16 +76,17 @@ class CarDetector(Thread):
 
         return cars
 
-    def pause(self, seconds):
-        logging.info("Pausing video...")
-        self.seconds = seconds
-        self.paused = True
+    def __green_state(self):
+        self.light.green()
+        sleep(1)
 
-    def resume(self):
-        pass
+    def __red_state(self, seconds):
+        self.light.red()
+        sleep(seconds)
+        self.state = States.GREEN_LIGHT.value
 
-    def stop(self):
-        logging.info("Stopping video...")
-        self.running = False
-        # self.cap.release()
-        # cv2.destroyAllWindows()
+    def __yellow_state(self):
+        # start_time = time.clock()
+        # seconds = int(time.clock() - start_time)
+        self.light.yellow()
+        self.state = States.RED_LIGHT.value
