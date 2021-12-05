@@ -6,6 +6,7 @@ import logging
 from threading import Thread
 from car_detector.traffic_light import TrafficLight
 from car_detector.states import States
+
 class CarDetector(Thread):
     def __init__(self, video_path, cascade_path, init_state) -> None:
         Thread.__init__(self)
@@ -18,6 +19,8 @@ class CarDetector(Thread):
         self.state = init_state
         # self.__create_trackbar()
 
+    def __parameter_selection(self, x):
+        pass
 
     def __create_trackbar(self):
         cv2.namedWindow("img")
@@ -27,17 +30,20 @@ class CarDetector(Thread):
     def run(self):
         self.__green_state()
         while self.running:
-            if States.GREEN_LIGHT.value == self.state:
-                self.__reproduce()
-            if States.YELLOW_LIGHT.value is self.state:
-                self.__yellow_state()
-            if States.RED_LIGHT.value is self.state:
-                self.__red_state(10)
-            if States.STOP_APP.value is self.state:
-                logging.info("Stopping app...")
-                break
+            self.__state_machine()
 
         cv2.destroyAllWindows()
+
+    def __state_machine(self):
+        if States.GREEN_LIGHT.value == self.state:
+            self.__reproduce()
+        if States.YELLOW_LIGHT.value is self.state:
+            self.__yellow_state()
+        if States.RED_LIGHT.value is self.state:
+            self.__red_state(10)
+        if States.STOP_APP.value is self.state:
+            logging.info("Stopping app...")
+            exit(1)
 
     def __reproduce(self) -> None:
         ret, img = self.cap.read()

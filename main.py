@@ -22,9 +22,8 @@ class MainApp:
 
     def __start_threads(self, items: list) -> list:
         logging.info('Starting threads...')
-        for i, item in enumerate(items):
+        for item in items:
             item.start()
-            print(item)
         
 if __name__ == "__main__":
     main_app = MainApp()
