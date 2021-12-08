@@ -1,14 +1,19 @@
 
 from time import sleep
 import time
+import schedule
 import cv2
 import logging
 from threading import Thread
+import numpy as np
+from tensorflow.keras.preprocessing.image import img_to_array
+from tensorflow.keras.models import load_model
+from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
 from car_detector.traffic_light import TrafficLight
 from car_detector.states import States
 
 class CarDetector(Thread):
-    def __init__(self, video_path, cascade_path, init_state) -> None:
+    def __init__(self, video_path, cascade_path, init_state, time_sleep) -> None:
         Thread.__init__(self)
         self.light = TrafficLight()
         self.cascade_path = cascade_path
@@ -17,6 +22,8 @@ class CarDetector(Thread):
         self.car_cascade = cv2.CascadeClassifier(self.cascade_path)
         self.running = True
         self.state = init_state
+        self.model = load_model('./car_detector/firet_recog.h5')
+        self.time_sleep = time_sleep
         # self.__create_trackbar()
 
     def __parameter_selection(self, x):
@@ -31,64 +38,93 @@ class CarDetector(Thread):
         self.__green_state()
         while self.running:
             self.__state_machine()
+            schedule.run_pending()
+            time.sleep(1)
 
         cv2.destroyAllWindows()
 
     def __state_machine(self):
-        if States.GREEN_LIGHT.value == self.state:
+        if States.GREEN_LIGHT.value is self.state:
             self.__reproduce()
         if States.YELLOW_LIGHT.value is self.state:
             self.__yellow_state()
         if States.RED_LIGHT.value is self.state:
-            self.__red_state(10)
+            self.__red_state()
         if States.STOP_APP.value is self.state:
             logging.info("Stopping app...")
             exit(1)
 
-    def __reproduce(self) -> None:
-        ret, img = self.cap.read()
+    def __reproduce(self):
+        schedule.every(self.time_sleep).seconds.do(self.__validate_state)
+        cars_list=[]
+        preds=[]
+        ret, frame = self.cap.read()
 
-        if (type(img) == type(None) and ret == False):
+        if (type(frame) == type(None) and ret == False):
             logging.error('No image found')
             exit(1)
-
-        cars = self.__detect_cars(img)
-        # print(f'Número de carros contados: {len(cars)}')
+            
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        cars = self.car_cascade.detectMultiScale(
+            gray,
+            scaleFactor = 1.1,
+            minNeighbors = 3,
+            minSize = (60, 60),
+            flags = cv2.CASCADE_SCALE_IMAGE
+        )
 
         for (x, y, w, h) in cars:
-            ## TODO - Lógica para cambiar estado dependiendo de la cantidad de carros detectados y si hay auto de emergencia
-            cv2.rectangle(img, (x, y),(x + w, y + h),(0, 0, 255), 2)
+            car_frame = self.__detect_car(cars_list, frame, x, y, w, h)
+            cars_list.append(car_frame)
+
+            if len(cars_list) > 0:
+                preds = self.model.predict(cars_list)
+
+            for pred in preds:
+                (car, emergency_car) = pred
             
-        cv2.imshow(self.video_path, img)
+            label = "Carro de emergencia"
+            color = (0, 0, 255)
+            if car > emergency_car:
+                label = "Carro"
+                color = (0, 255, 0)
 
-        if cv2.waitKey(33) == 27:
-            self.state = States.STOP_APP.value
+            label = "{}: {:.2f}%".format(label, max(car, emergency_car) * 100)
+            cv2.putText(frame, label, (x, y- 10),cv2.FONT_HERSHEY_SIMPLEX, 0.45, color, 2)
+            cv2.rectangle(frame, (x, y), (x + w, y + h),color, 2)
+
+            cv2.imshow('Video', frame)
+            k = cv2.waitKey(1)
+            if k == 27 or k ==ord('q'):
+                exit(1)
+                # break
     
-    def __detect_cars(self, img) -> list:
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        scalefactor_track = cv2.getTrackbarPos('Scale Factor', 'img')
-        min_neigh_track = cv2.getTrackbarPos('Min Neighbours', 'img')
+    def __detect_car(self, cars: list, frame, x, y, w, h) -> list:
+        car_frame = frame[y:y+h,x:x+w]
+        car_frame = cv2.resize(car_frame, (224, 224))
+        car_frame = cv2.cvtColor(car_frame, cv2.COLOR_BGR2RGB)        
+        car_frame = img_to_array(car_frame)
+        car_frame = np.expand_dims(car_frame, axis=0)
+        car_frame =  preprocess_input(car_frame)
 
-        if scalefactor_track is 0:
-            scalefactor_track = 1
-        else:
-            cars = self.car_cascade.detectMultiScale(
-                gray, 
-                scaleFactor = (125 + 100) / 100, # 1.25 
-                minNeighbors = 1, #1
-                minSize=(60, 60), 
-                flags=cv2.CASCADE_SCALE_IMAGE
-            )
+        return car_frame       
 
-        return cars
+    def __validate_state(self):
+        print("Validating state...", self.state == States.GREEN_LIGHT.value)
+        if self.state == States.GREEN_LIGHT.value:
+           self.__red_state()
+        if self.state == States.RED_LIGHT.value:
+            self.__green_state()
 
     def __green_state(self):
         self.light.green()
-        sleep(1)
+        sleep(5)
+        self.state = States.RED_LIGHT.value
+        # sleep(10)
 
-    def __red_state(self, seconds):
+    def __red_state(self):
         self.light.red()
-        sleep(seconds)
+        sleep(5)
         self.state = States.GREEN_LIGHT.value
 
     def __yellow_state(self):
