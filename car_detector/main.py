@@ -22,7 +22,7 @@ class CarDetector(Thread):
         self.car_cascade = cv2.CascadeClassifier(self.cascade_path)
         self.running = True
         self.state = init_state
-        self.model = load_model('./car_detector/firet_recog.h5')
+        self.model = load_model('./car_detector/f30.h5')
         self.time_sleep = time_sleep
         # self.__create_trackbar()
 
@@ -35,24 +35,12 @@ class CarDetector(Thread):
         cv2.createTrackbar('Min Neighbours', 'img', 10, 100, self.__parameter_selection)
 
     def run(self):
-        self.__green_state()
         while self.running:
-            self.__state_machine()
+            self.__reproduce()
             schedule.run_pending()
             time.sleep(1)
 
         cv2.destroyAllWindows()
-
-    def __state_machine(self):
-        if States.GREEN_LIGHT.value is self.state:
-            self.__reproduce()
-        if States.YELLOW_LIGHT.value is self.state:
-            self.__yellow_state()
-        if States.RED_LIGHT.value is self.state:
-            self.__red_state()
-        if States.STOP_APP.value is self.state:
-            logging.info("Stopping app...")
-            exit(1)
 
     def __reproduce(self):
         schedule.every(self.time_sleep).seconds.do(self.__validate_state)
@@ -74,7 +62,7 @@ class CarDetector(Thread):
         )
 
         for (x, y, w, h) in cars:
-            car_frame = self.__detect_car(cars_list, frame, x, y, w, h)
+            car_frame = self.__detect_car(frame, x, y, w, h)
             cars_list.append(car_frame)
 
             if len(cars_list) > 0:
@@ -99,7 +87,7 @@ class CarDetector(Thread):
                 exit(1)
                 # break
     
-    def __detect_car(self, cars: list, frame, x, y, w, h) -> list:
+    def __detect_car(self, frame, x, y, w, h):
         car_frame = frame[y:y+h,x:x+w]
         car_frame = cv2.resize(car_frame, (224, 224))
         car_frame = cv2.cvtColor(car_frame, cv2.COLOR_BGR2RGB)        
@@ -110,21 +98,20 @@ class CarDetector(Thread):
         return car_frame       
 
     def __validate_state(self):
-        print("Validating state...", self.state == States.GREEN_LIGHT.value)
+        schedule.clear()
         if self.state == States.GREEN_LIGHT.value:
-           self.__red_state()
-        if self.state == States.RED_LIGHT.value:
             self.__green_state()
+        if self.state == States.RED_LIGHT.value:
+            self.__red_state()
 
     def __green_state(self):
+        print("Green state", self.state)
         self.light.green()
-        sleep(5)
         self.state = States.RED_LIGHT.value
-        # sleep(10)
 
     def __red_state(self):
+        print("Red state", self.state)
         self.light.red()
-        sleep(5)
         self.state = States.GREEN_LIGHT.value
 
     def __yellow_state(self):
